@@ -33,25 +33,26 @@ environment {
       }
     }
 stage('Build and Push Docker Image') {
-            steps {
-                script {
-                    sh 'cd java-maven-sonar-argocd-helm-k8s/spring-boot-app && docker build -t ${DOCKER_IMAGE} .'
-                    def dockerImage = docker.image("${DOCKER_IMAGE}")
-                    script {
-                        // Create a temporary file to store the Docker Hub password
-                        def credentialsFile = sh(script: 'echo -n "Friends1!" | docker login --username "mounikapoda" --password-stdin ' + DOCKER_REGISTRY_URL, returnStatus: true).trim()
-
-                        // Check if login was successful before pushing the image
-                        if (credentialsFile == 0) {
+      environment {
+        DOCKER_IMAGE = "abhishekf5/ultimate-cicd:${BUILD_NUMBER}"
+        // DOCKERFILE_LOCATION = "java-maven-sonar-argocd-helm-k8s/spring-boot-app/Dockerfile"
+        REGISTRY_CREDENTIALS = credentials('docker-cred')
+        
+      }
+      steps {
+        script {
+            sh 'cd java-maven-sonar-argocd-helm-k8s/spring-boot-app && docker build -t ${DOCKER_IMAGE} .'
+            def dockerImage = docker.image("${DOCKER_IMAGE}")
+            
+            script {
+                        docker.withRegistry('https://hub.docker.com/', 'docker-cred') {
                             // Push the Docker image to the registry
                             dockerImage.push()
-                        } else {
-                            error 'Docker login failed!'
                         }
                     }
-                }
-            }
         }
+      }
+    }
     stage('Update Deployment File') {
         environment {
             GIT_REPO_NAME = "Jenkins-Zero-To-Hero"
